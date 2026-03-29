@@ -9,6 +9,16 @@ let map = new mapboxgl.Map({
     zoom: 12,
 });
 
+let crashdata = null;
+
+fetch('https://raw.githubusercontent.com/daniel81017/Lab4/refs/heads/main/data/pedcyc_collision_06-21.geojson')
+    .then(response => response.json())
+    .then(response => {
+        console.log(response);
+        crashdata = response;
+    });
+
+;
 
 /*--------------------------------------------------------------------
 Step 2: VIEW GEOJSON POINT DATA ON MAP

@@ -11,14 +11,44 @@ let map = new mapboxgl.Map({
 
 let crashdata = null;
 
-fetch('https://raw.githubusercontent.com/daniel81017/Lab4/refs/heads/main/data/pedcyc_collision_06-21.geojson')
+fetch('./pedcyc_collision_06-21.geojson')
     .then(response => response.json())
     .then(response => {
         console.log(response);
         crashdata = response;
     });
-
 ;
+
+// map.on('load', () => {
+//     map.addSource('crashdatatest', {
+//         type: 'geojson',
+//         data: 'https://raw.githubusercontent.com/daniel81017/Lab4/refs/heads/main/data/pedcyc_collision_06-21.geojson',
+//     });
+
+//     map.addLayer({
+//         'id': 'crashpedestrians',
+//         'type': 'circle',
+//         'source': 'walthamstow-data',
+//         'paint': {
+//             'circle-width': 10,
+//             'circle-color': '#000000',
+//             'circle-outline': 2,
+//         },
+//         'filter': ['==', ['properties-INVTYPE'], 'Pedestrian'],
+//     });
+
+//     map.addLayer({
+//         'id': 'crashpedestrians',
+//         'type': 'circle',
+//         'source': 'walthamstow-data',
+//         'paint': {
+//             'circle-width': 10,
+//             'circle-color': '#830000',
+//             'circle-outline': 2,
+//         },
+//         'filter': ['==', ['properties-INVTYPE'], 'Cyclist'],
+//     });
+// });
 
 /*--------------------------------------------------------------------
 Step 2: VIEW GEOJSON POINT DATA ON MAP

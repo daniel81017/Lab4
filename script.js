@@ -107,6 +107,7 @@ map.on('load', () => {
         type: 'geojson',
         data: hexgrid,
     });
+    //Renders hexgrid lines
     map.addLayer({
         'id': 'TorontohexgridONMAP',
         'type': 'line',
@@ -119,6 +120,19 @@ map.on('load', () => {
             'visibility': 'none',
         },
     });
+    //Renders hexgrid interior colour (using layer type 'fill')
+     map.addLayer({
+        'id': 'TorontohexgridFILL',
+        'type': 'fill',
+        'source': 'Torontohexgridvisualized',
+        'paint': {
+            'fill-opacity': .5,
+            'fill-color': '#b77979',
+        },
+        'layout': {
+            'visibility': 'visible',
+        },
+    });   
 
     //AGGREGATE COLLISION DATA
     let collisionhexagons = turf.collect(hexgrid, crashdata, '_id', 'values');
@@ -135,27 +149,30 @@ map.on('load', () => {
             // "If" is pursued and ultimately repeats 13 times according to the console.log()  (i.e. there were 13 times that identified a number of collisions in a hexagon greater than all previous ones assessed)
         }
     });
-    console.log("One hexagon had", maxcollisions, "pedestrian or cyclist collisions in Toronto"); //Prints final value with the highest collisions in a hexagon because when a hexagon would eclipse another in the if statement.
-    // Result: there is a hexagon with a collision high of 72 occurrences.
+    console.log("One hexagon had", maxcollisions, "pedestrian or cyclist collisions in Toronto, the highest in the city."); //Prints final value with the highest collisions in a hexagon because when a hexagon would eclipse another in the "if" statement.
+    // Result: there is a hexagon with a collision high of 72 occurrences. 
 
-    // map.addLayer({
-    //     'id': 'hexagon-fill',
-    //     'type': 'fill',
-    //     'source': 'Torontohexgridvisualized',
-    //     'layout': {},
-    //     'paint': {
-    //         'fill-color': '#c2dd13',
-    //         'fill-opacity': [
-    //             'case',
-    //             ['boolean', ['feature-state', 'hover'], false], //INTERPRET ARRAY CORRECTLY
-    //             0.3,
-    //             0
-    //         ]
-    //     },
-    // });
+    //CALCULATE COLLISION DATA PER HEXAGON FOR HEXAGON CLICKS
+        // map.on('click', 'TorontohexgridONMAP', (e) => {
+        //     new mapboxgl.Popup()
+        //         .setLngLat(e.lngLat)
+        //         .setHTML(e.features[0].properties.name)
+        //         .addTo(map);
+        // });
+
+        // // Change the cursor to a pointer when
+        // // the mouse is over the states layer.
+        // map.on('mouseenter', 'states-layer', () => {
+        //     map.getCanvas().style.cursor = 'pointer';
+        // });
+
+        // // Change the cursor back to a pointer
+        // // when it leaves the states layer.
+        // map.on('mouseleave', 'states-layer', () => {
+        //     map.getCanvas().style.cursor = '';
+        // });
+
 });
-
-// document.getElementById('defaultviewbutton').addEventListener('click', () => {});
 
 
 
@@ -167,15 +184,16 @@ buttonPoint.addEventListener(
         console.log("111=", pointVisible);
         pointVisible = !pointVisible;
         console.log("222=", pointVisible);
-        const visibility = map.getLayoutProperty('crashpedestrians','visibility');
+        // const visibility = map.getLayoutProperty('crashpedestrians','visibility');
         if (pointVisible) {
             map.setLayoutProperty("crashpedestrians", 'visibility', 'visible');
-            buttonPoint.classList.toggle("active", pointVisible)
+            map.setLayoutProperty("crashcyclists", 'visibility', 'visible');
         }
         else {
             map.setLayoutProperty("crashpedestrians", 'visibility', 'none');
-            buttonPoint.classList.toggle("active", pointVisible);
+            map.setLayoutProperty("crashcyclists", 'visibility', 'none');
         };
+        buttonPoint.classList.toggle("active", pointVisible);
     }
 );
 
@@ -187,78 +205,91 @@ buttonHexagon.addEventListener(
         console.log("aaa=", hexagonVisible);
         hexagonVisible = !hexagonVisible;
         console.log("bbb=", hexagonVisible);
-        const visibility1 = map.getLayoutProperty('crashpedestrians','visibility');
+        // const visibility1 = map.getLayoutProperty('crashpedestrians', 'visibility');
         if (hexagonVisible) {
-            map.setLayoutProperty("crashpedestrians", 'visibility', 'visible');
-            buttonHexagon.classList.toggle("active", hexagonVisible)
+            map.setLayoutProperty("TorontobboxPolygonONMAP", 'visibility', 'visible');
+            map.setLayoutProperty("TorontohexgridONMAP", 'visibility', 'visible');
         }
         else {
-            map.setLayoutProperty("crashpedestrians", 'visibility', 'visible');
-            buttonHexagon.classList.toggle("active", hexagonVisible);
+            map.setLayoutProperty("TorontobboxPolygonONMAP", 'visibility', 'none');
+            map.setLayoutProperty("TorontohexgridONMAP", 'visibility', 'none');
         };
+        buttonHexagon.classList.toggle("active", hexagonVisible);
     }
 );
 
-// buttonPoint.onclick = () => {
+map.on('click', (e) => {
+    let hexgrid = turf.hexGrid(bbox, cellSide);
+    let collisionhexagons1 = turf.collect(hexgrid, crashdata, '_id', 'values');
+    let clickedpoint = turf.point([e.latlng.lng, e.latlng.lat]); //Stores the user input "e" longitude and latitude for later use.
+    let withinhexgridchecker = null; //Used later to check whether user-inputted point is in the polygon using Turf.js boolean function. Set to null to facilitate eventual visualization of non-null individual hexagons associated with a user-inputted click location.
 
-// };
+    collisionhexagons1.features.forEach((withinhexgridchecker) => {
+        //feature.properties.COUNT = feature.properties.values.length //Counts number of collisions in a feature (hexagon)
+        if (turf.booleanPointInPolygon(clickedpoint, 'TorontohexgridFILL')) { //Checker that observes whether the stored (e) user-clicked coordinates are inside a hexagon. Iterative process.
+            console.log('QWERTY', feature);
+            withinhexgridchecker = 'TorontohexgridFILL';
+        }
+    });
 
-
+    if (withinhexgridchecker) 
+    console.log("SUCCESSFULLY DETERMINED POINT IN/OUT OF A GIVEN HEXGRID");
+});
 
 // After the last frame rendered before the map enters an "idle" state.
-map.on('idle', () => {
-    // If these two layers were not added to the map, abort
-    // if (!map.getLayer('crashpedestrians') || !map.getLayer('crashcyclists') || !map.getLayer('TorontobboxPolygonONMAP') || !map.getLayer('TorontohexgridONMAP')) {
-    //     return;
-    // }
+// map.on('idle', () => {
+//     // If these two layers were not added to the map, abort
+//     // if (!map.getLayer('crashpedestrians') || !map.getLayer('crashcyclists') || !map.getLayer('TorontobboxPolygonONMAP') || !map.getLayer('TorontohexgridONMAP')) {
+//     //     return;
+//     // }
 
-    // Enumerate ids of the layers.
-    const toggleableMenuIds = ["Point", "Hexagon"];
+//     // Enumerate ids of the layers.
+//     const toggleableMenuIds = ["Point", "Hexagon"];
 
-    // Set up the corresponding toggle button for each layer.
-    for (const id of toggleableMenuIds) {
-        // Skip layers that already have a button set up.
-        if (document.getElementById(id)) {
-            continue;
-        }
+//     // Set up the corresponding toggle button for each layer.
+//     for (const id of toggleableMenuIds) {
+//         // Skip layers that already have a button set up.
+//         if (document.getElementById(id)) {
+//             continue;
+//         }
 
-        // Create a link.
-        const link = document.createElement('a');
-        link.id = id;
-        link.href = '#';
-        link.textContent = id;
-        link.className = 'active';
+//         // Create a link.
+//         const link = document.createElement('a');
+//         link.id = id;
+//         link.href = '#';
+//         link.textContent = id;
+//         link.className = 'active';
 
-        // Show or hide layer when the toggle is clicked.
-        // link.onclick = function (e) {
-        //     const clickedLayer = this.textContent;
-        //     e.preventDefault();
-        //     e.stopPropagation();
+//         // Show or hide layer when the toggle is clicked.
+//         // link.onclick = function (e) {
+//         //     const clickedLayer = this.textContent;
+//         //     e.preventDefault();
+//         //     e.stopPropagation();
 
-        //     const visibility = map.getLayoutProperty(
-        //         clickedLayer,
-        //         'visibility'
-        //     );
+//         //     const visibility = map.getLayoutProperty(
+//         //         clickedLayer,
+//         //         'visibility'
+//         //     );
 
-        //     // Toggle layer visibility by changing the layout object's visibility property.
-        //     if (visibility === 'visible') {
-        //         map.setLayoutProperty(clickedLayer, 'visibility', 'none');
-        //         this.className = '';
-        //     } else {
-        //         this.className = 'active';
-        //         map.setLayoutProperty(
-        //             clickedLayer,
-        //             'visibility',
-        //             'visible'
-        //         );
-        //     }
-        // };
+//         //     // Toggle layer visibility by changing the layout object's visibility property.
+//         //     if (visibility === 'visible') {
+//         //         map.setLayoutProperty(clickedLayer, 'visibility', 'none');
+//         //         this.className = '';
+//         //     } else {
+//         //         this.className = 'active';
+//         //         map.setLayoutProperty(
+//         //             clickedLayer,
+//         //             'visibility',
+//         //             'visible'
+//         //         );
+//         //     }
+//         // };
 
-        const layers = document.getElementById('menu');
-        layers.appendChild(link);
-    }
-    console.log("SUCCESSFUL TOGGLES (4)")
-});
+//         const layers = document.getElementById('menu');
+//         layers.appendChild(link);
+//     }
+//     console.log("SUCCESSFUL TOGGLES (4)")
+// });
 
 /*--------------------------------------------------------------------
 Step 2: VIEW GEOJSON POINT DATA ON MAP

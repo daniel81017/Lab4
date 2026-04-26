@@ -1,3 +1,4 @@
+/* MAP FRAME */
 .main-map1 {
     position: absolute;
     top: 0;
@@ -6,3 +7,161 @@
     right: 0;
     width: 100%;
 }
+
+/* POINT/HEXAGON TOGGLES */
+
+.hexagonbutton{
+    position: absolute;
+    display: block;
+    background: #ffffff;
+    z-index: 1000;
+    top: 5px;
+    left: 5px;
+    /* display: flex; */
+    padding: 10px;
+    border-radius: 8px;
+    max-width: 200px;
+}
+
+.pointbutton {
+    position: absolute;
+    display: block;
+    background: #ffffff;
+    z-index: 1000;
+    top: 50px;
+    left: 5px;
+    /* display: flex; */
+    margin: 0px 10 30 0px;
+    padding: 10px;
+    border-radius: 8px;
+    max-width: 200px;
+} 
+
+/* LEGEND ITEMS */
+
+.legend {
+    position: absolute;
+    display: block;
+    background: rgba(255, 255, 255, 0.85);
+    z-index: 1000;
+    bottom: 25px;
+    right: 5px;
+    margin: 0px 10 30 0px;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    max-width: 200px;
+}
+
+.legendtitle{
+
+}
+
+.legendtext{
+    font: 10px 'Arial', Helvetica, Verdana, sans-serif;
+    color: #000000;
+    right: -50px;
+    width: 90%;
+    position: relative;
+    z-index: 1000;
+
+}
+
+.colour-ramp {
+    display: inline-block;
+    margin-right: 5px;
+    height: 15px;
+    width: 50px;
+    background: linear-gradient(0.25turn, #2d9b2b, #ffa500, #d40000);
+    border: 0.1px, solid, #000000;
+}
+
+/* Specifics for each attribute to allow for different shapes in legend */
+
+/* .hex {
+SOURCE: https://jtauber.github.io/articles/css-hexagon.html
+width: 0;
+border-bottom: 30px solid #6C6;
+border-left: 30px solid transparent;
+border-right: 30px solid transparent;
+
+    width: 52px;
+    height: 60px;
+    background-color: #6C6;
+
+width: 0;
+border-bottom: 30px solid #6C6;
+border-left: 30px solid transparent;
+border-right: 30px solid transparent;
+
+} */
+
+.campus-block {
+    height: 10px;
+    width: 10px;
+    background-color: #c2dd13;
+    border: 1.5px, solid, #ff0000;
+}
+
+.pedestrianpoints {
+    display: inline-block;
+    margin-right: 5px;
+    height: 15px;
+    width: 15px;
+    border-radius: 50%;
+    border: 0.1px, solid, #000000;
+    background-color: #0800ff;
+}
+
+
+.cyclistpoints {
+    display: inline-block;
+    margin-right: 5px;
+    height: 15px;
+    width: 15px;
+    border-radius: 50%;
+    border: 0.1px, solid, #000000;
+    background-color: #D000FF;
+}
+
+    #menu {
+        background: #fff;
+        position: absolute;
+        z-index: 1;
+        top: 10px;
+        right: 10px;
+        border-radius: 3px;
+        width: 120px;
+        border: 1px solid rgba(0, 0, 0, 0.4);
+        font-family: 'Open Sans', sans-serif;
+    }
+
+    #menu a {
+        font-size: 13px;
+        color: #404040;
+        display: block;
+        margin: 0;
+        padding: 0;
+        padding: 10px;
+        text-decoration: none;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.25);
+        text-align: center;
+    }
+
+    #menu a:last-child {
+        border: none;
+    }
+
+    #menu a:hover {
+        background-color: #f8f8f8;
+        color: #404040;
+    }
+
+    #menu a.active {
+        background-color: #3887be;
+        color: #ffffff;
+    }
+
+    #menu a.active:hover {
+        background: #3074a4;
+    }

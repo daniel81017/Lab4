@@ -10,6 +10,7 @@ let map = new mapboxgl.Map({
 });
 
 let crashdata;
+let hoveredHexagonId = null
 
 fetch('https://raw.githubusercontent.com/daniel81017/Lab4/refs/heads/main/pedcyc_collision_06-21.geojson')
     .then(response => response.json())
@@ -27,8 +28,6 @@ map.on('load', () => {
     map.addSource('crashdatavisualized', {
         type: 'geojson', //IS INCORRECT
         data: crashdata,
-        // type: 'geojson',
-        // data: 'https://raw.githubusercontent.com/daniel81017/Lab4/refs/heads/main/pedcyc_collision_06-21.geojson',
     });
     console.log("2-SUCCESSFULLY RUN CRASHDATA JSON", crashdata);
 
@@ -39,10 +38,13 @@ map.on('load', () => {
         'source': 'crashdatavisualized',
         'paint': {
             'circle-width': 10,
-            'circle-color': 'rgb(208, 0, 255)',
+            'circle-color': '#D000FF',
             'circle-outline': 2,
         },
         'filter': ['==', ['get', 'INVTYPE'], 'Pedestrian'],
+        'layout': {
+            'visibility': 'none',
+        },
     });
     map.addLayer({
         'id': 'crashcyclists',
@@ -54,71 +56,10 @@ map.on('load', () => {
             'circle-outline': 2,
         },
         'filter': ['==', ['get', 'INVTYPE'], 'Cyclist'],
+        'layout': {
+            'visibility': 'none',
+        },
     });
-
-    //PRACTICE
-    //CREATE BBOXPOLYGON IN AFRICA
-    // console.log("1-", turf);
-    // var bbox = [0, 0, 10, 10];
-    // let poly = turf.bboxPolygon(bbox);
-    // console.log("2-", turf);
-
-    // map.addSource('bboxpolygonvisualized', {
-    //     type: 'geojson',
-    //     data: poly,
-    // });
-    // map.addLayer({
-    //     'id': 'bboxPolygonONMAP',
-    //     'type': 'line',
-    //     'source': 'bboxpolygonvisualized',
-    //     'paint': {
-    //         'line-width': 10,
-    //         'line-color': '#000000',
-    //     },
-    // });
-
-    //CREATE HEXGRID IN USA
-    // var bbox = [-96, 31, -84, 40];
-    // let cellSide = 50;
-    // let options = { units: "miles" };
-    // let hexgrid = turf.hexGrid(bbox, cellSide, options);
-
-    // map.addSource('hexgridvisualized', {
-    //     type: 'geojson',
-    //     data: hexgrid,
-    // });
-    // map.addLayer({
-    //     'id': 'hexgridONMAP',
-    //     'type': 'line',
-    //     'source': 'hexgridvisualized',
-    //     'paint': {
-    //         'line-width': 10,
-    //         'line-color': '#000000',
-    //     },
-    // });
-
-    //CREATE BBOX IN NE USA
-    // let line = turf.lineString([
-    //     [-74, 40],
-    //     [-78, 42],
-    //     [-82, 35],
-    // ]);
-    // var bbox = turf.bbox(line);
-    // let bboxPolygon = turf.bboxPolygon(bbox);
-
-    // map.addSource('bboxvisualized', {
-    //     type: 'geojson',
-    //     data: bboxPolygon,
-    // });
-    // map.addLayer({
-    //     'id': 'bboxONMAP',
-    //     'type': 'line',
-    //     'source': 'bboxvisualized',
-    //     'paint': {
-    //         'line-width': 10,
-    //         'line-color': '#000000',
-    //     },
-    // });
 
     //CREATE ENVELOPE
     let enveloperesult = turf.envelope(crashdata);
@@ -128,18 +69,20 @@ map.on('load', () => {
         "type": "Feature Collection",
         "features": [enveloperesult],
     };
-    console.log(bboxgeojson.features[0].geometry.coordinates[0][0][1])
+    console.log(bboxgeojson.features[0].geometry.coordinates[0][0][1]);
 
     //With the coordinates produced by the envelope and subsequent feature collection (visualized in the console.log()), the min/max X/Y coordinates are collected to produce a bounding box.
 
     //CREATE TORONTO BBOXPOLYGON
-    var bbox = [-79.621974, 43.590289, -79.122974, 43.837935];
+    var bbox = enveloperesult.bbox;
     //Creates the bboxpolygon using the coordinates, but does not render on map
     let polygon = turf.bboxPolygon(bbox);
+    //Scales hexgrid to full extent of bbox
+    const scaledpolygon = turf.transformScale(polygon, 1.1);
     //Loads onto map
     map.addSource('Torontobboxpolygonvisualized', {
         type: 'geojson',
-        data: polygon,
+        data: scaledpolygon,
     });
     map.addLayer({
         'id': 'TorontobboxPolygonONMAP',
@@ -149,6 +92,9 @@ map.on('load', () => {
             'line-width': 5,
             'line-color': '#000000',
         },
+        'layout': {
+            'visibility': 'none',
+        },
     });
 
     //CREATE TORONTO HEXGRID IN BBOXPOLYGON
@@ -156,12 +102,10 @@ map.on('load', () => {
     let options = {}; //Default is kilometres
     //Creates the hexgrid within the bbox just created and the size/options customizations, but does not render on map
     let hexgrid = turf.hexGrid(bbox, cellSide);
-    //Scales hexgrid to full extent of bbox
-    const scaledhexgrid = turf.transformScale(hexgrid, 5);
     //Loads onto map
     map.addSource('Torontohexgridvisualized', {
         type: 'geojson',
-        data: scaledhexgrid,
+        data: hexgrid,
     });
     map.addLayer({
         'id': 'TorontohexgridONMAP',
@@ -171,7 +115,149 @@ map.on('load', () => {
             'line-width': 3,
             'line-color': '#000000',
         },
+        'layout': {
+            'visibility': 'none',
+        },
     });
+
+    //AGGREGATE COLLISION DATA
+    let collisionhexagons = turf.collect(hexgrid, crashdata, '_id', 'values');
+    console.log("Data valid for aggregate counting", collisionhexagons);
+
+    //COLLISION DATA COUNTS
+    let maxcollisions = 0; //Variable created to store the hexagon with the greatest number of collisions, initially assigned zero
+
+    collisionhexagons.features.forEach((feature) => { //Applies to all hexagons. Based on the aggregate hexgrid and crashdata variables, collected using variable "collisionhexagons"
+        feature.properties.COUNT = feature.properties.values.length //Counts number of collisions in a feature (hexagon)
+        if (feature.properties.COUNT > maxcollisions) { //Continues counting the number of points in a feature (hexagon) exceeds the maxcollisions value. Iterative and repeats itself once a polygon with a greater number of collisions are identified.
+            console.log(2 + 2, feature);
+            maxcollisions = (feature.properties.COUNT); //Declare maxcollisions to be the new higher value of collisions per hexagon to facilitate the "if" statement again
+            // "If" is pursued and ultimately repeats 13 times according to the console.log()  (i.e. there were 13 times that identified a number of collisions in a hexagon greater than all previous ones assessed)
+        }
+    });
+    console.log("One hexagon had", maxcollisions, "pedestrian or cyclist collisions in Toronto"); //Prints final value with the highest collisions in a hexagon because when a hexagon would eclipse another in the if statement.
+    // Result: there is a hexagon with a collision high of 72 occurrences.
+
+    // map.addLayer({
+    //     'id': 'hexagon-fill',
+    //     'type': 'fill',
+    //     'source': 'Torontohexgridvisualized',
+    //     'layout': {},
+    //     'paint': {
+    //         'fill-color': '#c2dd13',
+    //         'fill-opacity': [
+    //             'case',
+    //             ['boolean', ['feature-state', 'hover'], false], //INTERPRET ARRAY CORRECTLY
+    //             0.3,
+    //             0
+    //         ]
+    //     },
+    // });
+});
+
+// document.getElementById('defaultviewbutton').addEventListener('click', () => {});
+
+
+
+let pointVisible = false;
+const buttonPoint = document.getElementById("pointbuttonJS");
+buttonPoint.addEventListener(
+    'click',
+    () => {
+        console.log("111=", pointVisible);
+        pointVisible = !pointVisible;
+        console.log("222=", pointVisible);
+        const visibility = map.getLayoutProperty('crashpedestrians','visibility');
+        if (pointVisible) {
+            map.setLayoutProperty("crashpedestrians", 'visibility', 'visible');
+            buttonPoint.classList.toggle("active", pointVisible)
+        }
+        else {
+            map.setLayoutProperty("crashpedestrians", 'visibility', 'none');
+            buttonPoint.classList.toggle("active", pointVisible);
+        };
+    }
+);
+
+let hexagonVisible = false;
+const buttonHexagon = document.getElementById("hexagonbuttonJS");
+buttonHexagon.addEventListener(
+    'click',
+    () => {
+        console.log("aaa=", hexagonVisible);
+        hexagonVisible = !hexagonVisible;
+        console.log("bbb=", hexagonVisible);
+        const visibility1 = map.getLayoutProperty('crashpedestrians','visibility');
+        if (hexagonVisible) {
+            map.setLayoutProperty("crashpedestrians", 'visibility', 'visible');
+            buttonHexagon.classList.toggle("active", hexagonVisible)
+        }
+        else {
+            map.setLayoutProperty("crashpedestrians", 'visibility', 'visible');
+            buttonHexagon.classList.toggle("active", hexagonVisible);
+        };
+    }
+);
+
+// buttonPoint.onclick = () => {
+
+// };
+
+
+
+// After the last frame rendered before the map enters an "idle" state.
+map.on('idle', () => {
+    // If these two layers were not added to the map, abort
+    // if (!map.getLayer('crashpedestrians') || !map.getLayer('crashcyclists') || !map.getLayer('TorontobboxPolygonONMAP') || !map.getLayer('TorontohexgridONMAP')) {
+    //     return;
+    // }
+
+    // Enumerate ids of the layers.
+    const toggleableMenuIds = ["Point", "Hexagon"];
+
+    // Set up the corresponding toggle button for each layer.
+    for (const id of toggleableMenuIds) {
+        // Skip layers that already have a button set up.
+        if (document.getElementById(id)) {
+            continue;
+        }
+
+        // Create a link.
+        const link = document.createElement('a');
+        link.id = id;
+        link.href = '#';
+        link.textContent = id;
+        link.className = 'active';
+
+        // Show or hide layer when the toggle is clicked.
+        // link.onclick = function (e) {
+        //     const clickedLayer = this.textContent;
+        //     e.preventDefault();
+        //     e.stopPropagation();
+
+        //     const visibility = map.getLayoutProperty(
+        //         clickedLayer,
+        //         'visibility'
+        //     );
+
+        //     // Toggle layer visibility by changing the layout object's visibility property.
+        //     if (visibility === 'visible') {
+        //         map.setLayoutProperty(clickedLayer, 'visibility', 'none');
+        //         this.className = '';
+        //     } else {
+        //         this.className = 'active';
+        //         map.setLayoutProperty(
+        //             clickedLayer,
+        //             'visibility',
+        //             'visible'
+        //         );
+        //     }
+        // };
+
+        const layers = document.getElementById('menu');
+        layers.appendChild(link);
+    }
+    console.log("SUCCESSFUL TOGGLES (4)")
 });
 
 /*--------------------------------------------------------------------

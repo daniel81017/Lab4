@@ -17,7 +17,18 @@
 
 <body>
     <!-- Map -->
-    <div id="main-map1" class="main-map1"></div>
+    <div id="main-map1" class="main-map1">
+        <div id="campus-legend" class="legend">
+            <h4 class="legendtitle">Campus</h4>
+            <div><span class="colour-ramp"><p class="legendtext">Collision by Area</p></span></div>
+            <div><span class="hex"></span><p class="legendtext">Hexagons (0.5km spans)</p></div>
+            <div><span class="pedestrianpoints"></span><p class="legendtext">Pedestrian Collisions</p></div>
+            <div><span class="cyclistpoints"></span><p class="legendtext">Cyclist Collisions</p></div>
+        </div>
+        <button class="hexagonbutton" id="hexagonbuttonJS">Hexagon</button>
+        <button class="pointbutton" id="pointbuttonJS">Point</button>
+        <nav id="menu"></nav>
+    </div>
     <!-- Script Connection -->
     <script src="script.js"></script>
 </body>

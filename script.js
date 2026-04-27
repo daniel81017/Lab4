@@ -121,7 +121,7 @@ map.on('load', () => {
         },
     });
     //Renders hexgrid interior colour (using layer type 'fill')
-     map.addLayer({
+    map.addLayer({
         'id': 'TorontohexgridFILL',
         'type': 'fill',
         'source': 'Torontohexgridvisualized',
@@ -130,9 +130,9 @@ map.on('load', () => {
             'fill-color': '#b77979',
         },
         'layout': {
-            'visibility': 'visible',
+            'visibility': 'none',
         },
-    });   
+    });
 
     //AGGREGATE COLLISION DATA
     let collisionhexagons = turf.collect(hexgrid, crashdata, '_id', 'values');
@@ -153,89 +153,92 @@ map.on('load', () => {
     // Result: there is a hexagon with a collision high of 72 occurrences. 
 
     //CALCULATE COLLISION DATA PER HEXAGON FOR HEXAGON CLICKS
-        // map.on('click', 'TorontohexgridONMAP', (e) => {
-        //     new mapboxgl.Popup()
-        //         .setLngLat(e.lngLat)
-        //         .setHTML(e.features[0].properties.name)
-        //         .addTo(map);
-        // });
+    map.on('click', (e) => {
+        let collisionhexagons1 = turf.collect(hexgrid, crashdata, '_id', 'values'); //Differentiates from the 'collisionhexagons' variable defined earlier, while continuing use of Turf.js collect.
+        let clickedpoint = turf.point([e.lngLat.lng, e.lngLat.lat]); //Stores the user input "e" longitude and latitude for later use.
+        let clickedhexagon = null; //Used later to check whether user-inputted point is in the polygon using Turf.js boolean function. Set to null to facilitate eventual visualization of non-null individual hexagons associated with a user-inputted click location.
 
-        // // Change the cursor to a pointer when
-        // // the mouse is over the states layer.
-        // map.on('mouseenter', 'states-layer', () => {
-        //     map.getCanvas().style.cursor = 'pointer';
-        // });
+        collisionhexagons1.features.forEach((feature) => {
+            if (turf.booleanPointInPolygon(clickedpoint, feature)) { //Checker that observes whether the stored (e) user-clicked coordinates are inside a hexagon and, if so, identifies the points in a polygon with Turf.js.
+                console.log('QWERTY', feature); //'Feature' is the counts of collisions per hexagons (where there are collisions, of course). Prints in console.log().
+                clickedhexagon = feature; //Set variable for future use, no longer null if there are collisions in a hexagon that the user clicks.
+            } //Iterative process that repeats.
+        });
 
-        // // Change the cursor back to a pointer
-        // // when it leaves the states layer.
-        // map.on('mouseleave', 'states-layer', () => {
-        //     map.getCanvas().style.cursor = '';
-        // });
-
-});
-
-
-
-let pointVisible = false;
-const buttonPoint = document.getElementById("pointbuttonJS");
-buttonPoint.addEventListener(
-    'click',
-    () => {
-        console.log("111=", pointVisible);
-        pointVisible = !pointVisible;
-        console.log("222=", pointVisible);
-        // const visibility = map.getLayoutProperty('crashpedestrians','visibility');
-        if (pointVisible) {
-            map.setLayoutProperty("crashpedestrians", 'visibility', 'visible');
-            map.setLayoutProperty("crashcyclists", 'visibility', 'visible');
+        //For use if only want to function for hexagons that contain pedestrian/cyclist collision points:
+        if (clickedhexagon.properties.COUNT == 1) {
+            console.log("SUCCESSFULLY DETERMINED POINT IN/OUT OF A GIVEN HEXGRID", clickedhexagon);
+            //Popup
+            // map.on('click', 'TorontohexgridONMAP', (e) => {
+            new mapboxgl.Popup()
+                .setLngLat(e.lngLat)
+                .setHTML('This hexagon (500m width) had ' + clickedhexagon.properties.COUNT + ' collision (pedestrian and cyclist) from 2006 to 2021.')
+                .addTo(map);
+            // });
         }
         else {
-            map.setLayoutProperty("crashpedestrians", 'visibility', 'none');
-            map.setLayoutProperty("crashcyclists", 'visibility', 'none');
+            //Popup
+            // map.on('click', 'TorontohexgridONMAP', (e) => {
+            new mapboxgl.Popup()
+                .setLngLat(e.lngLat)
+                .setHTML('This hexagon (500m width) had ' + clickedhexagon.properties.COUNT + ' collisions (pedestrian and cyclist) from 2006 to 2021.')
+                .addTo(map);
+            // });
         };
-        buttonPoint.classList.toggle("active", pointVisible);
-    }
-);
-
-let hexagonVisible = false;
-const buttonHexagon = document.getElementById("hexagonbuttonJS");
-buttonHexagon.addEventListener(
-    'click',
-    () => {
-        console.log("aaa=", hexagonVisible);
-        hexagonVisible = !hexagonVisible;
-        console.log("bbb=", hexagonVisible);
-        // const visibility1 = map.getLayoutProperty('crashpedestrians', 'visibility');
-        if (hexagonVisible) {
-            map.setLayoutProperty("TorontobboxPolygonONMAP", 'visibility', 'visible');
-            map.setLayoutProperty("TorontohexgridONMAP", 'visibility', 'visible');
-        }
-        else {
-            map.setLayoutProperty("TorontobboxPolygonONMAP", 'visibility', 'none');
-            map.setLayoutProperty("TorontohexgridONMAP", 'visibility', 'none');
-        };
-        buttonHexagon.classList.toggle("active", hexagonVisible);
-    }
-);
-
-map.on('click', (e) => {
-    let hexgrid = turf.hexGrid(bbox, cellSide);
-    let collisionhexagons1 = turf.collect(hexgrid, crashdata, '_id', 'values');
-    let clickedpoint = turf.point([e.latlng.lng, e.latlng.lat]); //Stores the user input "e" longitude and latitude for later use.
-    let withinhexgridchecker = null; //Used later to check whether user-inputted point is in the polygon using Turf.js boolean function. Set to null to facilitate eventual visualization of non-null individual hexagons associated with a user-inputted click location.
-
-    collisionhexagons1.features.forEach((withinhexgridchecker) => {
-        //feature.properties.COUNT = feature.properties.values.length //Counts number of collisions in a feature (hexagon)
-        if (turf.booleanPointInPolygon(clickedpoint, 'TorontohexgridFILL')) { //Checker that observes whether the stored (e) user-clicked coordinates are inside a hexagon. Iterative process.
-            console.log('QWERTY', feature);
-            withinhexgridchecker = 'TorontohexgridFILL';
-        }
     });
 
-    if (withinhexgridchecker) 
-    console.log("SUCCESSFULLY DETERMINED POINT IN/OUT OF A GIVEN HEXGRID");
-});
+    //MOUSE POINTER STYLING CHANGE
+    map.on('mouseenter', 'TorontohexgridFILL', () => {
+        map.getCanvas().style.cursor = 'pointer';
+    });
+    map.on('mouseleave', 'TorontohexgridFILL', () => {
+        map.getCanvas().style.cursor = '';
+    });
 
+    let pointVisible = false;
+    const buttonPoint = document.getElementById("pointbuttonJS");
+    buttonPoint.addEventListener(
+        'click',
+        () => {
+            console.log("111=", pointVisible);
+            pointVisible = !pointVisible;
+            console.log("222=", pointVisible);
+            // const visibility = map.getLayoutProperty('crashpedestrians','visibility');
+            if (pointVisible) {
+                map.setLayoutProperty("crashpedestrians", 'visibility', 'visible');
+                map.setLayoutProperty("crashcyclists", 'visibility', 'visible');
+            }
+            else {
+                map.setLayoutProperty("crashpedestrians", 'visibility', 'none');
+                map.setLayoutProperty("crashcyclists", 'visibility', 'none');
+            };
+            buttonPoint.classList.toggle("active", pointVisible);
+        }
+    );
+
+    let hexagonVisible = false;
+    const buttonHexagon = document.getElementById("hexagonbuttonJS");
+    buttonHexagon.addEventListener(
+        'click',
+        () => {
+            console.log("aaa=", hexagonVisible);
+            hexagonVisible = !hexagonVisible;
+            console.log("bbb=", hexagonVisible);
+            if (hexagonVisible) {
+                map.setLayoutProperty("TorontobboxPolygonONMAP", 'visibility', 'visible');
+                map.setLayoutProperty("TorontohexgridONMAP", 'visibility', 'visible');
+                map.setLayoutProperty("TorontohexgridFILL", 'visibility', 'visible');
+            }
+            else {
+                map.setLayoutProperty("TorontobboxPolygonONMAP", 'visibility', 'none');
+                map.setLayoutProperty("TorontohexgridONMAP", 'visibility', 'none');
+                map.setLayoutProperty("TorontohexgridFILL", 'visibility', 'none');
+            };
+            buttonHexagon.classList.toggle("active", hexagonVisible);
+        }
+    );
+
+});
 // After the last frame rendered before the map enters an "idle" state.
 // map.on('idle', () => {
 //     // If these two layers were not added to the map, abort

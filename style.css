@@ -10,7 +10,7 @@
 
 /* POINT/HEXAGON TOGGLES */
 
-.hexagonbutton{
+.hexagonbutton {
     position: absolute;
     display: block;
     background: #ffffff;
@@ -35,74 +35,50 @@
     padding: 10px;
     border-radius: 8px;
     max-width: 200px;
-} 
+}
 
 /* LEGEND ITEMS */
 
 .legend {
     position: absolute;
     display: block;
-    background: rgba(255, 255, 255, 0.85);
+    background: #ffffff;
     z-index: 1000;
-    bottom: 25px;
+    bottom: 40px;
     right: 5px;
-    margin: 0px 10 30 0px;
     padding: 10px;
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
     max-width: 200px;
 }
 
-.legendtitle{
-
-}
-
-.legendtext{
+.legendtext {
     font: 10px 'Arial', Helvetica, Verdana, sans-serif;
     color: #000000;
-    right: -50px;
-    width: 90%;
-    position: relative;
-    z-index: 1000;
-
-}
-
-.colour-ramp {
     display: inline-block;
-    margin-right: 5px;
+}
+
+.legendtitle {
+    font: 10.5px 'Arial', Helvetica, Verdana, sans-serif;
+    font-weight: bold;
+    color: #000000;
+    display: inline-block;
+    max-width: 100px;
+}
+
+/* Code attribution for hexagon shape (Temani Afif 2026): https://css-tricks.com/responsive-hexagon-grid-using-modern-css/ */
+.hex {
     height: 15px;
-    width: 50px;
-    background: linear-gradient(0.25turn, #2d9b2b, #ffa500, #d40000);
-    border: 0.1px, solid, #000000;
+    width: 15px;
+    margin-right: 5px;
+    border-radius: 25% / 50%;
+    corner-shape: bevel;
+    aspect-ratio: 1/cos(30deg);
+    border: 2px solid #000000;
+    box-sizing: border-box;
+    display: inline-grid;
 }
 
-/* Specifics for each attribute to allow for different shapes in legend */
-
-/* Hexagon symbol sample */
-/* .hex {
-SOURCE: https://jtauber.github.io/articles/css-hexagon.html
-width: 0;
-border-bottom: 30px solid #6C6;
-border-left: 30px solid transparent;
-border-right: 30px solid transparent;
-
-    width: 52px;
-    height: 60px;
-    background-color: #6C6;
-
-width: 0;
-border-bottom: 30px solid #6C6;
-border-left: 30px solid transparent;
-border-right: 30px solid transparent;
-
-} */
-
-.campus-block {
-    height: 10px;
-    width: 10px;
-    background-color: #c2dd13;
-    border: 1.5px, solid, #ff0000;
-}
 
 .pedestrianpoints {
     display: inline-block;
@@ -110,7 +86,7 @@ border-right: 30px solid transparent;
     height: 15px;
     width: 15px;
     border-radius: 50%;
-    border: 0.1px, solid, #000000;
+    border: 0.1px, solid #000000;
     background-color: #0800ff;
 }
 

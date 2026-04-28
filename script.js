@@ -1,5 +1,5 @@
 //Mapbox Public Token
-mapboxgl.accessToken = 'pk.eyJ1IjoiZGFuaWVsODEwMTciLCJhIjoiY21rZWI2eGg4MDU5NjNscHdxbjhkMTNmciJ9.jdsMukp7zHz3llySNBJs0A'; //****ADD YOUR PUBLIC ACCESS TOKEN*****
+mapboxgl.accessToken = 'pk.eyJ1IjoiZGFuaWVsODEwMTciLCJhIjoiY21rZWI2eGg4MDU5NjNscHdxbjhkMTNmciJ9.jdsMukp7zHz3llySNBJs0A';
 
 // Map
 let map = new mapboxgl.Map({
@@ -9,29 +9,28 @@ let map = new mapboxgl.Map({
     zoom: 12,
 });
 
+//Global variables
 let crashdata;
 let hoveredHexagonId = null
 
+//Retrieve data from remote repository
 fetch('https://raw.githubusercontent.com/daniel81017/Lab4/refs/heads/main/pedcyc_collision_06-21.geojson')
     .then(response => response.json())
     .then(response => {
-        console.log(response, 'SUCCESS!');
         crashdata = response;
         console.log(crashdata);
     });
 ;
 
-
+//After map loads...
 map.on('load', () => {
-    //Adds data to map for visualization purposes
-    console.log("1-SUCCESSFULLY RUN CRASHDATA JSON", crashdata);
+    //ADDS DATA TO MAP FOR VISUALIZATION PURPOSES
     map.addSource('crashdatavisualized', {
-        type: 'geojson', //IS INCORRECT
+        type: 'geojson',
         data: crashdata,
     });
-    console.log("2-SUCCESSFULLY RUN CRASHDATA JSON", crashdata);
 
-    //Adds points to map for visualization purposes
+    //ADDS POINTS TO MAP FOR VISUALIZATION PURPOSES
     map.addLayer({
         'id': 'crashpedestrians',
         'type': 'circle',
@@ -61,17 +60,15 @@ map.on('load', () => {
         },
     });
 
-    //CREATE ENVELOPE
+    //CREATE TURF.JS ENVELOPE
+    //With the coordinates produced by the envelope and subsequent feature collection (visualized in the console.log()), the min/max X/Y coordinates are collected to produce a bounding box.
     let enveloperesult = turf.envelope(crashdata);
-    console.log(enveloperesult.bbox);
-    console.log(enveloperesult.bbox[0]);
+    //Envelope coordinate retrieval
+    console.log("Envelope longitudes and latitudes, min and max", enveloperesult.bbox);
     bboxgeojson = {
         "type": "Feature Collection",
         "features": [enveloperesult],
     };
-    console.log(bboxgeojson.features[0].geometry.coordinates[0][0][1]);
-
-    //With the coordinates produced by the envelope and subsequent feature collection (visualized in the console.log()), the min/max X/Y coordinates are collected to produce a bounding box.
 
     //CREATE TORONTO BBOXPOLYGON
     var bbox = enveloperesult.bbox;
@@ -97,11 +94,15 @@ map.on('load', () => {
         },
     });
 
-    //CREATE TORONTO HEXGRID IN BBOXPOLYGON
+    //CREATE HEXGRID IN BBOXPOLYGON
     let cellSide = 0.5;
     let options = {}; //Default is kilometres
     //Creates the hexgrid within the bbox just created and the size/options customizations, but does not render on map
     let hexgrid = turf.hexGrid(bbox, cellSide);
+    //Assignment of feature ID of hexagons to facilitate Mapbox interoperability.
+    hexgrid.features.forEach((feature, i) => {
+        feature.id = i;
+    });
     //Loads onto map
     map.addSource('Torontohexgridvisualized', {
         type: 'geojson',
@@ -126,17 +127,52 @@ map.on('load', () => {
         'type': 'fill',
         'source': 'Torontohexgridvisualized',
         'paint': {
-            'fill-opacity': .5,
-            'fill-color': '#b77979',
+            'fill-color': '#000000',
+            'fill-opacity': [
+                'case',
+                ['boolean', ['feature-state', 'hover'], false],
+                0.3,
+                0
+            ],
         },
         'layout': {
             'visibility': 'none',
         },
     });
 
+    //MOUSE POINTER STYLING CHANGE
+    //Changes the pointer to a cursor when hovering over polygon feature, reverting back to pointer when not hovering.
+    //Also adjusts the hover opacity. See lines 131-136.
+    map.on('mousemove', 'TorontohexgridFILL', (e) => {
+        map.getCanvas().style.cursor = 'pointer';
+        if (e.features.length > 0) {
+            if (hoveredHexagonId !== null) {
+                map.setFeatureState(
+                    { source: 'Torontohexgridvisualized', id: hoveredHexagonId },
+                    { hover: false }
+                );
+            }
+            hoveredHexagonId = e.features[0].id;
+            map.setFeatureState(
+                { source: 'Torontohexgridvisualized', id: hoveredHexagonId },
+                { hover: true }
+            );
+        }
+    });
+    map.on('mouseleave', 'TorontohexgridFILL', () => {
+        map.getCanvas().style.cursor = '';
+        if (hoveredHexagonId !== null) {
+            map.setFeatureState(
+                { source: 'Torontohexgridvisualized', id: hoveredHexagonId },
+                { hover: false }
+            );
+        }
+        //Reassigned as "null" to facilitate future hovers after returning cursor to inside of map boundary
+        hoveredHexagonId = null;
+    });
+
     //AGGREGATE COLLISION DATA
     let collisionhexagons = turf.collect(hexgrid, crashdata, '_id', 'values');
-    console.log("Data valid for aggregate counting", collisionhexagons);
 
     //COLLISION DATA COUNTS
     let maxcollisions = 0; //Variable created to store the hexagon with the greatest number of collisions, initially assigned zero
@@ -144,7 +180,6 @@ map.on('load', () => {
     collisionhexagons.features.forEach((feature) => { //Applies to all hexagons. Based on the aggregate hexgrid and crashdata variables, collected using variable "collisionhexagons"
         feature.properties.COUNT = feature.properties.values.length //Counts number of collisions in a feature (hexagon)
         if (feature.properties.COUNT > maxcollisions) { //Continues counting the number of points in a feature (hexagon) exceeds the maxcollisions value. Iterative and repeats itself once a polygon with a greater number of collisions are identified.
-            console.log(2 + 2, feature);
             maxcollisions = (feature.properties.COUNT); //Declare maxcollisions to be the new higher value of collisions per hexagon to facilitate the "if" statement again
             // "If" is pursued and ultimately repeats 13 times according to the console.log()  (i.e. there were 13 times that identified a number of collisions in a hexagon greater than all previous ones assessed)
         }
@@ -152,57 +187,49 @@ map.on('load', () => {
     console.log("One hexagon had", maxcollisions, "pedestrian or cyclist collisions in Toronto, the highest in the city."); //Prints final value with the highest collisions in a hexagon because when a hexagon would eclipse another in the "if" statement.
     // Result: there is a hexagon with a collision high of 72 occurrences. 
 
+    //Variables for popup and button
+    let hexagonVisible = false;
+    let hexagonpopup = null;
+
     //CALCULATE COLLISION DATA PER HEXAGON FOR HEXAGON CLICKS
     map.on('click', (e) => {
+        //Prevents popup from being opened without hexagon layer turned on.
+        if (!hexagonVisible) return;
         let collisionhexagons1 = turf.collect(hexgrid, crashdata, '_id', 'values'); //Differentiates from the 'collisionhexagons' variable defined earlier, while continuing use of Turf.js collect.
         let clickedpoint = turf.point([e.lngLat.lng, e.lngLat.lat]); //Stores the user input "e" longitude and latitude for later use.
         let clickedhexagon = null; //Used later to check whether user-inputted point is in the polygon using Turf.js boolean function. Set to null to facilitate eventual visualization of non-null individual hexagons associated with a user-inputted click location.
 
         collisionhexagons1.features.forEach((feature) => {
             if (turf.booleanPointInPolygon(clickedpoint, feature)) { //Checker that observes whether the stored (e) user-clicked coordinates are inside a hexagon and, if so, identifies the points in a polygon with Turf.js.
-                console.log('QWERTY', feature); //'Feature' is the counts of collisions per hexagons (where there are collisions, of course). Prints in console.log().
+                console.log(feature); //'Feature' is the counts of collisions per hexagons (where there are collisions, of course). Prints in console.log().
                 clickedhexagon = feature; //Set variable for future use, no longer null if there are collisions in a hexagon that the user clicks.
             } //Iterative process that repeats.
         });
 
         //For use if only want to function for hexagons that contain pedestrian/cyclist collision points:
         if (clickedhexagon.properties.COUNT == 1) {
-            console.log("SUCCESSFULLY DETERMINED POINT IN/OUT OF A GIVEN HEXGRID", clickedhexagon);
-            //Popup
-            // map.on('click', 'TorontohexgridONMAP', (e) => {
-            new mapboxgl.Popup()
+            //Popup creation (collisions singular)
+            hexagonpopup = new mapboxgl.Popup()
                 .setLngLat(e.lngLat)
                 .setHTML('This hexagon (500m width) had ' + clickedhexagon.properties.COUNT + ' collision (pedestrian and cyclist) from 2006 to 2021.')
                 .addTo(map);
-            // });
         }
         else {
-            //Popup
-            // map.on('click', 'TorontohexgridONMAP', (e) => {
-            new mapboxgl.Popup()
+            //Popup creation (collisions plural and zero)
+            hexagonpopup = new mapboxgl.Popup()
                 .setLngLat(e.lngLat)
                 .setHTML('This hexagon (500m width) had ' + clickedhexagon.properties.COUNT + ' collisions (pedestrian and cyclist) from 2006 to 2021.')
                 .addTo(map);
-            // });
         };
     });
 
-    //MOUSE POINTER STYLING CHANGE
-    map.on('mouseenter', 'TorontohexgridFILL', () => {
-        map.getCanvas().style.cursor = 'pointer';
-    });
-    map.on('mouseleave', 'TorontohexgridFILL', () => {
-        map.getCanvas().style.cursor = '';
-    });
-
+    //Button for point layer activation, event listener
     let pointVisible = false;
     const buttonPoint = document.getElementById("pointbuttonJS");
     buttonPoint.addEventListener(
         'click',
         () => {
-            console.log("111=", pointVisible);
             pointVisible = !pointVisible;
-            console.log("222=", pointVisible);
             // const visibility = map.getLayoutProperty('crashpedestrians','visibility');
             if (pointVisible) {
                 map.setLayoutProperty("crashpedestrians", 'visibility', 'visible');
@@ -216,14 +243,12 @@ map.on('load', () => {
         }
     );
 
-    let hexagonVisible = false;
+    //Button for hexagon layer activation, event listener
     const buttonHexagon = document.getElementById("hexagonbuttonJS");
     buttonHexagon.addEventListener(
         'click',
         () => {
-            console.log("aaa=", hexagonVisible);
             hexagonVisible = !hexagonVisible;
-            console.log("bbb=", hexagonVisible);
             if (hexagonVisible) {
                 map.setLayoutProperty("TorontobboxPolygonONMAP", 'visibility', 'visible');
                 map.setLayoutProperty("TorontohexgridONMAP", 'visibility', 'visible');
@@ -233,104 +258,13 @@ map.on('load', () => {
                 map.setLayoutProperty("TorontobboxPolygonONMAP", 'visibility', 'none');
                 map.setLayoutProperty("TorontohexgridONMAP", 'visibility', 'none');
                 map.setLayoutProperty("TorontohexgridFILL", 'visibility', 'none');
+                if (hexagonpopup) {
+                    hexagonpopup.remove();
+                    hexagonpopup = null;
+                };
             };
             buttonHexagon.classList.toggle("active", hexagonVisible);
         }
     );
 
 });
-// After the last frame rendered before the map enters an "idle" state.
-// map.on('idle', () => {
-//     // If these two layers were not added to the map, abort
-//     // if (!map.getLayer('crashpedestrians') || !map.getLayer('crashcyclists') || !map.getLayer('TorontobboxPolygonONMAP') || !map.getLayer('TorontohexgridONMAP')) {
-//     //     return;
-//     // }
-
-//     // Enumerate ids of the layers.
-//     const toggleableMenuIds = ["Point", "Hexagon"];
-
-//     // Set up the corresponding toggle button for each layer.
-//     for (const id of toggleableMenuIds) {
-//         // Skip layers that already have a button set up.
-//         if (document.getElementById(id)) {
-//             continue;
-//         }
-
-//         // Create a link.
-//         const link = document.createElement('a');
-//         link.id = id;
-//         link.href = '#';
-//         link.textContent = id;
-//         link.className = 'active';
-
-//         // Show or hide layer when the toggle is clicked.
-//         // link.onclick = function (e) {
-//         //     const clickedLayer = this.textContent;
-//         //     e.preventDefault();
-//         //     e.stopPropagation();
-
-//         //     const visibility = map.getLayoutProperty(
-//         //         clickedLayer,
-//         //         'visibility'
-//         //     );
-
-//         //     // Toggle layer visibility by changing the layout object's visibility property.
-//         //     if (visibility === 'visible') {
-//         //         map.setLayoutProperty(clickedLayer, 'visibility', 'none');
-//         //         this.className = '';
-//         //     } else {
-//         //         this.className = 'active';
-//         //         map.setLayoutProperty(
-//         //             clickedLayer,
-//         //             'visibility',
-//         //             'visible'
-//         //         );
-//         //     }
-//         // };
-
-//         const layers = document.getElementById('menu');
-//         layers.appendChild(link);
-//     }
-//     console.log("SUCCESSFUL TOGGLES (4)")
-// });
-
-/*--------------------------------------------------------------------
-Step 2: VIEW GEOJSON POINT DATA ON MAP
---------------------------------------------------------------------*/
-//HINT: Create an empty variable
-//      Use the fetch method to access the GeoJSON from your online repository
-//      Convert the response to JSON format and then store the response in your new variable
-
-
-
-/*--------------------------------------------------------------------
-    Step 3: CREATE BOUNDING BOX AND HEXGRID
---------------------------------------------------------------------*/
-//HINT: All code to create and view the hexgrid will go inside a map load event handler
-//      First create a bounding box around the collision point data
-//      Access and store the bounding box coordinates as an array variable
-//      Use bounding box coordinates as argument in the turf hexgrid function
-//      **Option: You may want to consider how to increase the size of your bbox to enable greater geog coverage of your hexgrid
-//                Consider return types from different turf functions and required argument types carefully here
-
-
-
-/*--------------------------------------------------------------------
-Step 4: AGGREGATE COLLISIONS BY HEXGRID
---------------------------------------------------------------------*/
-//HINT: Use Turf collect function to collect all '_id' properties from the collision points data for each heaxagon
-//      View the collect output in the console. Where there are no intersecting points in polygons, arrays will be empty
-
-
-
-// /*--------------------------------------------------------------------
-// Step 5: FINALIZE YOUR WEB MAP
-// --------------------------------------------------------------------*/
-//HINT: Think about the display of your data and usability of your web map.
-//      Update the addlayer paint properties for your hexgrid using:
-//        - an expression
-//        - The COUNT attribute
-//        - The maximum number of collisions found in a hexagon
-//      Add a legend and additional functionality including pop-up windows
-
-
